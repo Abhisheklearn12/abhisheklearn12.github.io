@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parallelism: hardware doesn't create parallelism - Abhishek</title>
+
+    <link rel="icon" type="image/jpeg" href="../assets/avatar.jpg" />
+
+    <!-- Google Analytics (GA4) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-H7XW85DBKF"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-H7XW85DBKF");
+    </script>
+
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+      html.dark body {
+        background-color: #0a0a0a;
+      }
+      html.dark .text-gray-900,
+      html.dark .text-gray-800,
+      html.dark .text-gray-700 {
+        color: #ededed;
+      }
+      html.dark .text-gray-600,
+      html.dark .text-gray-500 {
+        color: #a1a1aa;
+      }
+      html.dark .border-gray-200,
+      html.dark .border-gray-300 {
+        border-color: #262626;
+      }
+      .theme-icon-moon {
+        display: none;
+      }
+      html.dark .theme-icon-sun {
+        display: none;
+      }
+      html.dark .theme-icon-moon {
+        display: inline-flex;
+      }
+    </style>
+
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["$", "$"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script
+      id="MathJax-script"
+      async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    ></script>
+  </head>
+
+  <body
+    class="bg-white text-gray-900 w-full max-w-3xl mx-auto px-5 sm:px-6 md:px-0 pb-16"
+  >
+    <!-- Nav -->
+    <nav
+      class="flex justify-between items-center gap-3 py-6 border-b border-gray-200"
+    >
+      <a href="../index.html" class="shrink-0">
+        <img
+          src="../assets/avatar.jpg"
+          alt="Abhishek"
+          class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover"
+        />
+      </a>
+      <div class="flex gap-4 sm:gap-6 text-sm items-center">
+        <a href="../index.html" class="hover:text-orange-600 transition">Home</a>
+        <a href="./blog.html" class="hover:text-orange-600 transition">Blogs</a>
+        <a
+          href="../projects/projects.html"
+          class="hover:text-orange-600 transition"
+          >Projects</a
+        >
+        <a href="../videos/videos.html" class="hover:text-orange-600 transition"
+          >Videos</a
+        >
+        <button
+          id="theme-toggle"
+          aria-label="Switch white / black theme"
+          title="Switch white / black theme"
+          class="w-9 h-9 flex items-center justify-center rounded-full border border-gray-300 hover:text-orange-600 transition shrink-0"
+        >
+          <span class="theme-icon-sun"><i data-lucide="sun" class="w-4 h-4"></i></span>
+          <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
+        </button>
+      </div>
+    </nav>
+
+    <article class="mt-10">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
+        Parallelism: hardware doesn't create parallelism
+      </h1>
+      <p class="text-gray-500 mt-3">May 27, 2026</p>
+
+      <figure class="mt-8">
+        <img
+          src="../assets/parallelism-diagram.png"
+          alt="Diagram: parallelism comes from independence; uniform execution amortizes overhead, while dependencies force coordination and reduce scalability."
+          class="rounded-lg w-full"
+        />
+        <figcaption class="text-sm text-gray-500 mt-2 text-center">
+          Parallelism comes from independence in the workload, hardware only
+          consumes what's already there.
+        </figcaption>
+      </figure>
+
+      <div
+        class="mt-8 space-y-5 text-gray-800 leading-relaxed"
+      >
+        <p>
+          One of the deepest realizations I'm having about systems / GPU /
+          distributed computing:
+        </p>
+        <p><strong>Hardware does NOT create parallelism.</strong></p>
+        <p>
+          It only <em>consumes</em> parallelism that already exists in the data
+          / workload.
+        </p>
+        <p>That changes everything.</p>
+        <p>Parallelism fundamentally comes from:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li><strong>independence</strong></li>
+        </ul>
+        <p>Not from:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>GPUs</li>
+          <li>CUDA</li>
+          <li>tensor cores</li>
+          <li>clusters</li>
+        </ul>
+        <p>
+          Those are merely engines that exploit independence efficiently.
+        </p>
+
+        <h2 class="text-xl sm:text-2xl font-semibold mt-8">The deepest systems law</h2>
+        <blockquote
+          class="border-l-4 border-orange-400 pl-4 italic text-gray-700 space-y-2"
+        >
+          <p><strong>Independent work</strong> → scales well</p>
+          <p><strong>Dependent work</strong> → coordination cost appears</p>
+        </blockquote>
+        <p>And coordination creates:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>synchronization</li>
+          <li>communication overhead</li>
+          <li>scheduling complexity</li>
+          <li>ordering constraints</li>
+          <li>consistency problems</li>
+          <li>stalls</li>
+          <li>idle hardware</li>
+        </ul>
+        <p>That's why systems engineering becomes hard.</p>
+        <p>
+          <strong>Amdahl's law makes this concrete.</strong> If a fraction $f$
+          of the work is parallelizable and the rest $(1-f)$ is serial, then
+          with $p$ workers:
+        </p>
+        <p>
+          $$ S(p) \;=\; \frac{1}{(1-f) \;+\; \dfrac{f}{p}} \quad\xrightarrow{p
+          \to \infty}\quad \frac{1}{1-f} $$
+        </p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>
+            The serial fraction $(1-f)$, every bit of coordination, dependency,
+            synchronization, sets a hard ceiling on speedup, no matter how many
+            GPUs you throw at the problem.
+          </li>
+          <li>
+            Even $1\%$ dependent work caps speedup at $100\times$. That's the
+            cost of dependence, written as a number.
+          </li>
+        </ul>
+
+        <h2 class="text-xl sm:text-2xl font-semibold mt-8">
+          Distributed inference, suddenly clear
+        </h2>
+        <p>Single-GPU inference:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>mostly local computation</li>
+          <li>minimal coordination</li>
+        </ul>
+        <p>Distributed inference:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>activation transfers</li>
+          <li>all-reduce</li>
+          <li>KV synchronization</li>
+          <li>pipeline dependencies</li>
+        </ul>
+        <p>
+          Now GPUs become <em>dependent workers</em>. And dependent workers
+          create:
+        </p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>waiting</li>
+          <li>communication</li>
+          <li>synchronization</li>
+          <li>bottlenecks</li>
+        </ul>
+        <p>Which is why scaling distributed systems is hard.</p>
+        <p>
+          <strong>The communication cost is also a formula.</strong> A ring
+          all-reduce of an $m$-element gradient across $p$ GPUs takes roughly
+        </p>
+        <p>
+          $$ T_{\text{allreduce}}(p, m) \;\approx\; 2(p-1)\,\alpha \;+\;
+          2\,\frac{p-1}{p}\,\beta\,m $$
+        </p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>
+            where $\alpha$ is per-message latency and $\beta$ is per-byte time.
+          </li>
+          <li>
+            As $p$ grows the latency term $2(p-1)\alpha$ blows up linearly,
+            every extra GPU adds round-trips.
+          </li>
+          <li>
+            The data term $\frac{2(p-1)}{p}\beta m \to 2\beta m$ saturates.
+          </li>
+          <li>
+            So at scale, <strong>latency, not bandwidth, is what kills you</strong>
+            and that latency exists only because the workers depend on each
+            other.
+          </li>
+        </ul>
+
+        <h2 class="text-xl sm:text-2xl font-semibold mt-8">
+          Modern hardware LOVES uniformity
+        </h2>
+        <p>Why? Because control overhead is expensive too:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>instruction fetch</li>
+          <li>decode</li>
+          <li>scheduling</li>
+          <li>coordination</li>
+        </ul>
+        <p>
+          If 32 workers execute DIFFERENT instructions: hardware pays those
+          costs <strong>repeatedly</strong>.
+        </p>
+        <p>
+          If 32 workers execute the SAME instruction on different data: hardware
+          fetches / decodes / schedules <strong>once</strong>, then broadcasts
+          execution across all lanes.
+        </p>
+        <p>
+          This is <strong>amortization</strong>: sharing one overhead across
+          massive amounts of work.
+        </p>
+        <p>
+          Put numbers on it. Let $t_f$, $t_d$, $t_e$ be the time for fetch,
+          decode, execute, and let $W$ be the SIMT/SIMD width (e.g. $W = 32$ for
+          a GPU warp). One vector instruction processes $W$ items in a single
+          $(t_f + t_d + t_e)$ cycle. So for $N$ items (with $N$ a multiple of
+          $W$ for simplicity):
+        </p>
+        <p>
+          $$ T_{\text{scalar}}(N) \;=\; N\,(t_f + t_d + t_e) \qquad\quad
+          T_{\text{SIMT}}(N, W) \;=\; \frac{N}{W}\,(t_f + t_d + t_e) $$
+        </p>
+        <p>The raw speedup is just the lane count:</p>
+        <p>
+          $$ \text{Speedup} \;=\; \frac{T_{\text{scalar}}}{T_{\text{SIMT}}}
+          \;=\; W $$
+        </p>
+        <p>
+          But the amortization is sharper when you look at the
+          <strong>control cost per item</strong>:
+        </p>
+        <p>
+          $$ \underbrace{(t_f + t_d)}_{\text{scalar, per item}}
+          \;\;\longrightarrow\;\; \underbrace{\frac{t_f + t_d}{W}}_{\text{SIMT,
+          per item}} $$
+        </p>
+        <p>
+          Control overhead per useful op drops by a factor of $W$. With $W =
+          32$, that's a $32\times$ cheaper fetch+decode amortized across every
+          item the warp touches and that is the throughput.
+        </p>
+        <p>That's the heart of:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>SIMD</li>
+          <li>SIMT</li>
+          <li>tensor cores</li>
+          <li>batching</li>
+          <li>GPU throughput</li>
+        </ul>
+        <blockquote
+          class="border-l-4 border-orange-400 pl-4 italic text-gray-700 space-y-2"
+        >
+          <p>
+            <strong>Uniformity</strong> → amortized control cost → cheap
+            parallelism
+          </p>
+          <p>
+            <strong>Diversity / irregularity</strong> → broken amortization →
+            expensive coordination
+          </p>
+        </blockquote>
+        <p>This also explains:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>warp divergence</li>
+          <li>why GPUs hate branches</li>
+          <li>why branch-free kernels are fast</li>
+          <li>why tensor cores want regular shapes</li>
+          <li>why batching inference is powerful</li>
+        </ul>
+        <p>
+          <strong>Warp divergence has a clean cost formula.</strong> A warp of
+          $W=32$ lanes that splits across $k$ distinct control-flow paths must
+          execute each path serially, with most lanes idle on every pass.
+          Effective utilization and runtime are
+        </p>
+        <p>
+          $$ \eta_{\text{warp}} \;=\; \frac{1}{k} \qquad\qquad
+          T_{\text{warp}} \;=\; k \cdot T_{\text{path}} $$
+        </p>
+        <p>
+          So a 4-way branch turns one warp into a $4\times$ slowdown, not
+          because the math got harder, but because the broadcast got broken.
+        </p>
+
+        <h2 class="text-xl sm:text-2xl font-semibold mt-8">
+          Optimization is reducing dependency cost
+        </h2>
+        <p>Most advanced optimization is NOT "make arithmetic faster."</p>
+        <p>It is: <strong>"reduce dependency cost."</strong></p>
+        <p>Examples:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>overlap compute + communication</li>
+          <li>lock-free structures</li>
+          <li>batching</li>
+          <li>async execution</li>
+          <li>CUDA streams</li>
+          <li>speculative execution</li>
+          <li>pipeline balancing</li>
+        </ul>
+        <p>
+          All try to reduce: waiting, synchronization, coordination overhead.
+        </p>
+
+        <h2 class="text-xl sm:text-2xl font-semibold mt-8">
+          Everything compresses into five ideas
+        </h2>
+        <ol class="list-decimal list-inside space-y-1">
+          <li><strong>Find independence</strong></li>
+          <li><strong>Preserve uniformity</strong></li>
+          <li><strong>Minimize coordination</strong></li>
+          <li><strong>Amortize overhead</strong></li>
+          <li><strong>Keep hardware busy</strong></li>
+        </ol>
+        <p>
+          And suddenly: GPUs, CPUs, distributed systems, databases, networking,
+          operating systems, they all start feeling like variations of the same
+          deep ideas.
+        </p>
+
+        <hr class="border-gray-300 my-8" />
+
+        <h2 class="text-xl sm:text-2xl font-semibold mt-8">
+          The mechanism: why uniformity → throughput
+        </h2>
+        <ul class="list-disc list-inside space-y-1">
+          <li>
+            <strong>The high-level claim is "uniform execution amortizes
+            overhead."</strong>
+          </li>
+        </ul>
+        <p>
+          <strong
+            >Here's the mechanistic picture, what's actually happening at the
+            gate level:</strong
+          >
+        </p>
+
+        <figure class="mt-4">
+          <svg
+            viewBox="0 0 920 640"
+            xmlns="http://www.w3.org/2000/svg"
+            role="img"
+            class="w-full rounded-lg"
+            aria-label="Mechanistic diagram comparing scalar execution to SIMT execution, showing how SIMT amortizes fetch and decode overhead across many execution lanes."
+          >
+            <rect width="920" height="640" fill="#faf3e7" />
+            <line x1="460" y1="80" x2="460" y2="600" stroke="#d9cfb8" stroke-width="1.5" stroke-dasharray="4 4" />
+            <text x="460" y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="22" font-weight="700" fill="#1a2332">Amortization: how SIMT turns one instruction into massive throughput</text>
+            <text x="230" y="78" text-anchor="middle" font-family="Inter, sans-serif" font-size="17" font-weight="700" fill="#1a2332">Scalar execution</text>
+            <text x="230" y="98" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">1 worker, 1 item at a time — overhead paid every cycle</text>
+            <g font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1a2332" text-anchor="middle">
+              <rect x="40" y="130" width="100" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="90" y="155">FETCH</text>
+              <rect x="160" y="130" width="100" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="210" y="155">DECODE</text>
+              <rect x="280" y="130" width="140" height="40" rx="6" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="350" y="155">EXEC · data 0</text>
+            </g>
+            <g stroke="#1a2332" stroke-width="1.5" fill="none">
+              <line x1="140" y1="150" x2="160" y2="150" />
+              <line x1="260" y1="150" x2="280" y2="150" />
+            </g>
+            <g font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1a2332" text-anchor="middle">
+              <rect x="40" y="190" width="100" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="90" y="215">FETCH</text>
+              <rect x="160" y="190" width="100" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="210" y="215">DECODE</text>
+              <rect x="280" y="190" width="140" height="40" rx="6" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="350" y="215">EXEC · data 1</text>
+            </g>
+            <g stroke="#1a2332" stroke-width="1.5" fill="none">
+              <line x1="140" y1="210" x2="160" y2="210" />
+              <line x1="260" y1="210" x2="280" y2="210" />
+            </g>
+            <g font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1a2332" text-anchor="middle">
+              <rect x="40" y="250" width="100" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="90" y="275">FETCH</text>
+              <rect x="160" y="250" width="100" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="210" y="275">DECODE</text>
+              <rect x="280" y="250" width="140" height="40" rx="6" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="350" y="275">EXEC · data 2</text>
+            </g>
+            <g stroke="#1a2332" stroke-width="1.5" fill="none">
+              <line x1="140" y1="270" x2="160" y2="270" />
+              <line x1="260" y1="270" x2="280" y2="270" />
+            </g>
+            <text x="230" y="320" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="14" fill="#5a6273">… repeated for every item</text>
+            <rect x="40" y="370" width="380" height="120" rx="10" fill="#fff" stroke="#c4514b" stroke-width="1.5" stroke-dasharray="6 4" />
+            <text x="230" y="400" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="#1a2332">Total cost for N items</text>
+            <text x="230" y="430" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="14" fill="#1a2332">N × (fetch + decode + exec)</text>
+            <text x="230" y="458" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">overhead grows linearly with the work</text>
+            <text x="230" y="478" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">control is the bottleneck</text>
+            <text x="690" y="78" text-anchor="middle" font-family="Inter, sans-serif" font-size="17" font-weight="700" fill="#1a2332">SIMT / SIMD execution</text>
+            <text x="690" y="98" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">1 instruction broadcast to many lanes — overhead paid once</text>
+            <g font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1a2332" text-anchor="middle">
+              <rect x="610" y="130" width="160" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="690" y="155">FETCH (once)</text>
+            </g>
+            <line x1="690" y1="170" x2="690" y2="190" stroke="#1a2332" stroke-width="1.5" />
+            <polygon points="685,188 695,188 690,196" fill="#1a2332" />
+            <g font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1a2332" text-anchor="middle">
+              <rect x="610" y="196" width="160" height="40" rx="6" fill="#bcdcff" stroke="#1a2332" stroke-width="1.5" />
+              <text x="690" y="221">DECODE (once)</text>
+            </g>
+            <line x1="690" y1="236" x2="690" y2="256" stroke="#1a2332" stroke-width="1.5" />
+            <polygon points="685,254 695,254 690,262" fill="#1a2332" />
+            <rect x="500" y="262" width="380" height="34" rx="6" fill="#c6e8c6" stroke="#1a2332" stroke-width="1.5" />
+            <text x="690" y="284" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#1a2332">BROADCAST instruction to all lanes</text>
+            <g stroke="#1a2332" stroke-width="1.5" fill="none">
+              <line x1="540" y1="296" x2="540" y2="320" />
+              <line x1="600" y1="296" x2="600" y2="320" />
+              <line x1="660" y1="296" x2="660" y2="320" />
+              <line x1="720" y1="296" x2="720" y2="320" />
+              <line x1="780" y1="296" x2="780" y2="320" />
+              <line x1="840" y1="296" x2="840" y2="320" />
+            </g>
+            <g font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" fill="#1a2332" text-anchor="middle">
+              <rect x="510" y="320" width="60" height="34" rx="5" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="540" y="341">d0</text>
+              <rect x="570" y="320" width="60" height="34" rx="5" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="600" y="341">d1</text>
+              <rect x="630" y="320" width="60" height="34" rx="5" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="660" y="341">d2</text>
+              <rect x="690" y="320" width="60" height="34" rx="5" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="720" y="341">d3</text>
+              <rect x="750" y="320" width="60" height="34" rx="5" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="780" y="341">…</text>
+              <rect x="810" y="320" width="60" height="34" rx="5" fill="#ffe7a3" stroke="#1a2332" stroke-width="1.5" />
+              <text x="840" y="341">dN</text>
+            </g>
+            <text x="690" y="378" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">N execution lanes, one instruction</text>
+            <rect x="500" y="370" width="380" height="120" rx="10" fill="#fff" stroke="#2a7a2a" stroke-width="1.5" stroke-dasharray="6 4" />
+            <text x="690" y="400" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="#1a2332">Total cost for N items</text>
+            <text x="690" y="430" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="14" fill="#1a2332">1 × (fetch + decode) + N × exec</text>
+            <text x="690" y="458" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">control overhead is shared</text>
+            <text x="690" y="478" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">execution is the bottleneck — which is what you want</text>
+            <rect x="40" y="525" width="840" height="90" rx="12" fill="none" stroke="#c4514b" stroke-width="1.8" stroke-dasharray="8 5" />
+            <text x="460" y="558" text-anchor="middle" font-family="Inter, sans-serif" font-size="17" font-weight="700" fill="#1a2332">Amortization is the whole trick.</text>
+            <text x="460" y="585" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" fill="#1a2332">Uniformity ⇒ overhead is shared. Divergence breaks the broadcast and the speedup collapses with it.</text>
+            <text x="460" y="605" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#5a6273">This is why warp divergence hurts, why tensor cores want regular shapes, and why batching inference scales.</text>
+          </svg>
+          <figcaption class="text-sm text-gray-500 mt-2 text-center">
+            Scalar execution pays fetch+decode for every item. SIMT pays it once
+            and broadcasts, overhead becomes a constant, throughput scales with
+            lane count. Break uniformity, and you collapse back toward the left.
+          </figcaption>
+        </figure>
+
+        <p><strong>The mental model I keep coming back to:</strong></p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>
+            Find independence in your workload, then design execution so the
+            hardware can amortize control across it.
+          </li>
+          <li>
+            Everything else: kernels, schedulers, runtimes, communication
+            layers, is plumbing in service of that.
+          </li>
+        </ul>
+      </div>
+
+      <p class="mt-10">
+        <a
+          href="./blog.html"
+          class="text-orange-600 hover:underline underline-offset-4"
+          >← Back to blogs</a
+        >
+      </p>
+    </article>
+
+    <script>
+      document.getElementById("theme-toggle").addEventListener("click", () => {
+        document.documentElement.classList.toggle("dark");
+      });
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
