@@ -1,0 +1,477 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: transparent; }
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e2e4f0;
+    --muted: #7c83a8;
+    --amber: #f5a623;
+    --blue: #4a9eff;
+    --teal: #2dd4bf;
+    --green: #4ade80;
+    --red: #f87171;
+    --purple: #a78bfa;
+  }
+  .wrap { background: var(--bg); color: var(--text); font-family: "Anthropic Sans", ui-monospace, monospace; padding: 28px 24px; border-radius: 12px; min-height: 520px; }
+  .title { font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+  .subtitle { font-size: 20px; font-weight: 500; color: var(--text); margin-bottom: 24px; line-height: 1.3; }
+  .dram-grid-wrap { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 24px; }
+  .col-labels { display: flex; flex-direction: column; gap: 0; padding-top: 22px; }
+  .row-label { height: 28px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .row-label.active { color: var(--amber); font-weight: 500; }
+  .grid-area { flex: 1; }
+  .col-header { display: flex; margin-bottom: 4px; }
+  .col-head { width: 28px; text-align: center; font-size: 10px; color: var(--muted); flex-shrink: 0; }
+  .dram-row { display: flex; gap: 2px; margin-bottom: 2px; }
+  .cell {
+    width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-family: ui-monospace, monospace;
+    color: var(--muted); transition: all 0.25s;
+    cursor: pointer; position: relative; flex-shrink: 0;
+    background: var(--surface);
+  }
+  .cell.open { background: #1e2d1a; border-color: var(--green); color: var(--green); }
+  .cell.active-row { border-color: var(--amber); color: var(--amber); background: #2a2010; }
+  .cell.reading { background: #1a2a3a; border-color: var(--blue); color: var(--blue); animation: readpulse .5s ease; }
+  .cell.closing { animation: closepulse .4s ease; }
+  @keyframes readpulse { 0%{transform:scale(1.12); box-shadow:0 0 8px var(--blue);} 100%{transform:scale(1);} }
+  @keyframes closepulse { 0%{background:#2a1010; border-color:var(--red);} 100%{} }
+  .row-buffer-section { margin-top: 4px; }
+  .rb-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .rb-badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 500; }
+  .rb-badge.empty { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .rb-badge.loaded { background: #1e2d1a; color: var(--green); border: 1px solid var(--green); }
+  .rb-badge.closed { background: #1a0d0d; color: var(--muted); border: 1px solid var(--border); }
+  .row-buffer { display: flex; gap: 2px; }
+  .rb-cell {
+    width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-family: ui-monospace, monospace; color: var(--muted);
+    background: var(--surface2); transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .rb-cell.loaded { background: #1e2d1a; border-color: var(--green); color: var(--green); }
+  .rb-cell.accessed { background: #1a2a3a; border-color: var(--blue); color: var(--blue); animation: readpulse .4s ease; }
+  .phase-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+  .phase-title { font-size: 12px; font-weight: 500; color: var(--amber); margin-bottom: 4px; letter-spacing: .04em; }
+  .phase-desc { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .phase-desc em { color: var(--teal); font-style: normal; }
+  .phase-desc strong { color: var(--amber); font-weight: 500; }
+  .cost-bar-wrap { margin-top: 8px; }
+  .cost-bar-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .cost-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .cost-bar-fill { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .btn {
+    padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); transition: all .15s; font-family: inherit;
+  }
+  .btn:hover { border-color: var(--amber); color: var(--amber); }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: #2a2010; border-color: var(--amber); color: var(--amber); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .latency-track { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .lat-pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid; font-weight: 500; }
+  .lat-slow { border-color: var(--red); color: var(--red); background: #1a0d0d; }
+  .lat-fast { border-color: var(--green); color: var(--green); background: #0d1a10; }
+  .lat-medium { border-color: var(--amber); color: var(--amber); background: #1a1505; }
+  .scenario-track { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .scenario-btn { padding: 5px 11px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); transition: all .15s; font-family: inherit; }
+  .scenario-btn.active { border-color: var(--blue); color: var(--blue); background: #0d1a2a; }
+  .scenario-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .arrow-anim { font-size: 14px; color: var(--green); animation: arrowpulse 0.7s ease infinite; display: inline-block; }
+  @keyframes arrowpulse { 0%,100%{opacity:1;transform:translateY(0)} 50%{opacity:.5;transform:translateY(3px)} }
+  .step-dots { display: flex; gap: 6px; align-items: center; }
+  .step-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: all .2s; }
+  .step-dot.active { background: var(--amber); }
+  .step-dot.done { background: var(--green); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .leg-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid; }
+</style>
+
+<div class="wrap">
+  <div class="title">DRAM internals</div>
+  <div class="subtitle">What actually happens when you read one number?</div>
+
+  <div class="scenario-track">
+    <div class="scenario-label" style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px">Scenario:</div>
+    <button class="scenario-btn active" id="scn-miss" onclick="setScenario('miss')">Row miss (slow)</button>
+    <button class="scenario-btn" id="scn-hit" onclick="setScenario('hit')">Row hit (fast)</button>
+    <button class="scenario-btn" id="scn-close" onclick="setScenario('close')">Row switch (slowest)</button>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="btn-next" onclick="nextStep()">▶ Step forward</button>
+    <button class="btn" id="btn-reset" onclick="resetAnim()">↺ Reset</button>
+    <div style="flex:1"></div>
+    <div class="step-dots" id="step-dots"></div>
+  </div>
+
+  <div class="phase-panel" id="phase-panel">
+    <div class="phase-title" id="phase-title">Ready</div>
+    <div class="phase-desc" id="phase-desc">Choose a scenario above, then step through what happens inside the chip. Each scenario shows a different access <em>cost</em>.</div>
+    <div class="cost-bar-wrap">
+      <div class="cost-bar-label"><span id="cost-label">Latency cost</span><span id="cost-ns">—</span></div>
+      <div class="cost-bar-track"><div class="cost-bar-fill" id="cost-bar" style="width:0%;background:var(--amber)"></div></div>
+    </div>
+  </div>
+
+  <div class="latency-track" id="lat-track" style="display:none">
+    <div class="lat-pill" id="lat-pill">—</div>
+    <span style="font-size:12px;color:var(--muted)" id="lat-explain"></span>
+  </div>
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-swatch" style="background:#2a2010;border-color:var(--amber)"></div>Row being opened</div>
+    <div class="leg-item"><div class="leg-swatch" style="background:#1e2d1a;border-color:var(--green)"></div>Row buffer loaded</div>
+    <div class="leg-item"><div class="leg-swatch" style="background:#1a2a3a;border-color:var(--blue)"></div>Column being read</div>
+    <div class="leg-item"><div class="leg-swatch" style="background:#1a0d0d;border-color:var(--red)"></div>Row closed (writeback)</div>
+  </div>
+
+  <div class="dram-grid-wrap">
+    <div class="col-labels" id="row-labels"></div>
+    <div class="grid-area">
+      <div class="col-header" id="col-header"></div>
+      <div id="dram-grid"></div>
+      <div class="row-buffer-section">
+        <div class="rb-label">
+          <span style="font-size:11px;color:var(--muted);font-family:ui-monospace,monospace">ROW BUFFER</span>
+          <span class="rb-badge empty" id="rb-badge">empty</span>
+        </div>
+        <div class="row-buffer" id="row-buffer"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROWS = 6, COLS = 12;
+const data = [];
+for (let r = 0; r < ROWS; r++) {
+  data[r] = [];
+  for (let c = 0; c < COLS; c++) {
+    data[r][c] = Math.floor(Math.random() * 256).toString(16).padStart(2,'0').toUpperCase();
+  }
+}
+
+const scenarios = {
+  miss: {
+    name: 'Row miss',
+    targetRow: 2, targetCol: 5,
+    steps: [
+      { title: 'Idle — row buffer is empty', desc: 'The CPU has issued a request for address in <em>row 2, col 5</em>. The row buffer holds nothing yet. This is called a <strong>row miss</strong> — the most common first access.', cost: 0, costColor: 'var(--amber)', costLabel: 'No cost yet', costNs: '0 ns', phase: 'idle' },
+      { title: 'Phase 1 — Activate (row open)', desc: 'The memory controller sends an <strong>ACT command</strong> to row 2. This charges the sense amplifiers and <strong>reads out the entire row</strong> — about 1 KB, thousands of bits — at once into the row buffer. This is the <strong>slow, destructive read</strong> — the slow part of DRAM.', cost: 33, costColor: 'var(--red)', costLabel: 'tRCD — row open latency', costNs: '~14 ns', phase: 'open' },
+      { title: 'Phase 2 — Column access (CAS)', desc: 'The row is now loaded. The controller picks <em>column 5</em> from the row buffer. This <strong>CAS step costs about the same as the activation</strong>, but it reads from latches, not capacitors — so it never gets slower. The row buffer acts like a tiny cache.', cost: 67, costColor: 'var(--blue)', costLabel: 'tCL — column latency added', costNs: '~28 ns total', phase: 'read' },
+      { title: 'Done — data returned in ~28 ns', desc: 'One byte is back at the CPU. Row 2 stays <em>open</em> in the row buffer. A second read from this row would skip Phase 1 entirely — that\'s a <strong>row hit</strong>.', cost: 67, costColor: 'var(--green)', costLabel: 'Total latency (tRCD + tCL)', costNs: '~28 ns', phase: 'done' },
+    ]
+  },
+  hit: {
+    name: 'Row hit',
+    targetRow: 2, targetCol: 9,
+    preOpenRow: 2,
+    steps: [
+      { title: 'Row 2 is already open', desc: 'A previous access opened row 2. The row buffer still holds all its data. The CPU now requests <em>row 2, col 9</em> — same row, different column. This is a <strong>row hit</strong>.', cost: 0, costColor: 'var(--green)', costLabel: 'Row buffer is warm', costNs: '0 ns so far', phase: 'open' },
+      { title: 'Direct column access — skip activation', desc: 'No ACT needed. The controller jumps <strong>straight to the CAS command</strong> — column select only. Phase 1 (the activation) is entirely skipped, so you pay <strong>tCL alone</strong>. That\'s about 2× faster than a cold miss.', cost: 33, costColor: 'var(--blue)', costLabel: 'CAS only — no activation', costNs: '~14 ns', phase: 'read' },
+      { title: 'Done — data returned in ~14 ns', desc: 'One byte back. The row buffer is still open. Every read in the same row is this fast. This is why <strong>sequential and row-local access patterns</strong> are dramatically faster.', cost: 33, costColor: 'var(--green)', costLabel: 'Total latency (tCL only, ~2× faster)', costNs: '~14 ns', phase: 'done' },
+    ]
+  },
+  close: {
+    name: 'Row switch',
+    targetRow: 4, targetCol: 3,
+    preOpenRow: 1,
+    steps: [
+      { title: 'Row 1 is open — wrong row needed', desc: 'Row 1 is currently in the row buffer. But we need data from <em>row 4, col 3</em>. This requires a <strong>row switch</strong> — the most expensive DRAM operation.', cost: 0, costColor: 'var(--amber)', costLabel: 'Wrong row is open', costNs: '0 ns yet', phase: 'open_wrong' },
+      { title: 'Phase 1 — Precharge (close current row)', desc: 'The controller sends a <strong>PRE command</strong>. Reading was destructive — the capacitors in row 1 were drained. The sense amplifiers now <strong>write the data back</strong> to restore it. This takes time.', cost: 33, costColor: 'var(--red)', costLabel: 'tRP — precharge (writeback)', costNs: '~14 ns', phase: 'close' },
+      { title: 'Phase 2 — Activate row 4', desc: 'Row 1 is safely written back and the buffer is empty. Now the controller opens <em>row 4</em> — another slow activation, copying its whole ~1 KB row into the row buffer.', cost: 67, costColor: 'var(--red)', costLabel: 'tRCD added — open row 4', costNs: '~28 ns', phase: 'open' },
+      { title: 'Phase 3 — Column access', desc: 'Finally, <em>column 3</em> is selected from the row buffer. Only now does useful data travel to the CPU. This third phase is why row switching costs about <strong>1.5× a simple miss</strong>.', cost: 100, costColor: 'var(--blue)', costLabel: 'CAS on top', costNs: '~42 ns total', phase: 'read' },
+      { title: 'Done — data returned in ~42 ns (worst case)', desc: 'Precharge + Activate + CAS. A row switch is about <strong>3× slower</strong> than a row hit. This is why your memory access pattern determines whether DRAM feels fast or slow.', cost: 100, costColor: 'var(--red)', costLabel: 'Total: tRP + tRCD + tCL', costNs: '~42 ns', phase: 'done' },
+    ]
+  }
+};
+
+let current = 'miss';
+let step = 0;
+let animating = false;
+
+function buildGrid() {
+  const grid = document.getElementById('dram-grid');
+  const colHeader = document.getElementById('col-header');
+  const rowLabels = document.getElementById('row-labels');
+  const rb = document.getElementById('row-buffer');
+  grid.innerHTML = '';
+  colHeader.innerHTML = '';
+  rowLabels.innerHTML = '';
+  rb.innerHTML = '';
+  colHeader.innerHTML = '<div style="width:0;flex-shrink:0"></div>';
+  for (let c = 0; c < COLS; c++) {
+    const h = document.createElement('div');
+    h.className = 'col-head';
+    h.textContent = c;
+    colHeader.appendChild(h);
+  }
+  for (let r = 0; r < ROWS; r++) {
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.id = `rlabel-${r}`;
+    rl.textContent = `row ${r}`;
+    rowLabels.appendChild(rl);
+    const row = document.createElement('div');
+    row.className = 'dram-row';
+    row.id = `row-${r}`;
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${r}-${c}`;
+      cell.textContent = data[r][c];
+      row.appendChild(cell);
+    }
+    grid.appendChild(row);
+  }
+  for (let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'rb-cell';
+    cell.id = `rb-${c}`;
+    cell.textContent = '—';
+    rb.appendChild(cell);
+  }
+  buildDots();
+}
+
+function buildDots() {
+  const scn = scenarios[current];
+  const dots = document.getElementById('step-dots');
+  dots.innerHTML = '';
+  for (let i = 0; i < scn.steps.length; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i < step ? ' done' : i === step ? ' active' : '');
+    dots.appendChild(d);
+  }
+}
+
+function clearAll() {
+  for (let r = 0; r < ROWS; r++) {
+    document.getElementById(`rlabel-${r}`).className = 'row-label';
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.getElementById(`cell-${r}-${c}`);
+      cell.className = 'cell';
+    }
+  }
+  for (let c = 0; c < COLS; c++) {
+    const rb = document.getElementById(`rb-${c}`);
+    rb.className = 'rb-cell';
+    rb.textContent = '—';
+  }
+  document.getElementById('rb-badge').textContent = 'empty';
+  document.getElementById('rb-badge').className = 'rb-badge empty';
+  document.getElementById('lat-track').style.display = 'none';
+}
+
+function applyPhase(s) {
+  const scn = scenarios[current];
+  clearAll();
+  if (scn.preOpenRow !== undefined && s.phase !== 'close') {
+    if (s.phase !== 'open' && s.phase !== 'read' && s.phase !== 'done' || current === 'close' && step < 2) {
+      for (let c = 0; c < COLS; c++) {
+        document.getElementById(`cell-${scn.preOpenRow}-${c}`).className = 'cell open';
+        document.getElementById(`rb-${c}`).className = 'rb-cell loaded';
+        document.getElementById(`rb-${c}`).textContent = data[scn.preOpenRow][c];
+      }
+      document.getElementById(`rlabel-${scn.preOpenRow}`).className = 'row-label active';
+      document.getElementById('rb-badge').textContent = `row ${scn.preOpenRow} loaded`;
+      document.getElementById('rb-badge').className = 'rb-badge loaded';
+    }
+  }
+  if (s.phase === 'open_wrong' && scn.preOpenRow !== undefined) {
+    for (let c = 0; c < COLS; c++) {
+      document.getElementById(`cell-${scn.preOpenRow}-${c}`).className = 'cell open';
+      document.getElementById(`rb-${c}`).className = 'rb-cell loaded';
+      document.getElementById(`rb-${c}`).textContent = data[scn.preOpenRow][c];
+    }
+    document.getElementById(`rlabel-${scn.preOpenRow}`).className = 'row-label active';
+    document.getElementById('rb-badge').textContent = `row ${scn.preOpenRow} loaded`;
+    document.getElementById('rb-badge').className = 'rb-badge loaded';
+  }
+  if (s.phase === 'close') {
+    for (let c = 0; c < COLS; c++) {
+      document.getElementById(`cell-${scn.preOpenRow}-${c}`).className = 'cell closing';
+      document.getElementById(`rb-${c}`).className = 'rb-cell';
+      document.getElementById(`rb-${c}`).textContent = '—';
+    }
+    document.getElementById(`rlabel-${scn.preOpenRow}`).className = 'row-label';
+    document.getElementById('rb-badge').textContent = 'writeback…';
+    document.getElementById('rb-badge').className = 'rb-badge closed';
+    setTimeout(() => {
+      for (let c = 0; c < COLS; c++) {
+        document.getElementById(`cell-${scn.preOpenRow}-${c}`).className = 'cell';
+      }
+      document.getElementById('rb-badge').textContent = 'empty';
+    }, 400);
+  }
+  if (s.phase === 'open') {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.getElementById(`cell-${scn.targetRow}-${c}`);
+      cell.className = 'cell active-row';
+    }
+    document.getElementById(`rlabel-${scn.targetRow}`).className = 'row-label active';
+    setTimeout(() => {
+      for (let c = 0; c < COLS; c++) {
+        document.getElementById(`cell-${scn.targetRow}-${c}`).className = 'cell open';
+        document.getElementById(`rb-${c}`).className = 'rb-cell loaded';
+        document.getElementById(`rb-${c}`).textContent = data[scn.targetRow][c];
+      }
+      document.getElementById('rb-badge').textContent = `row ${scn.targetRow} loaded`;
+      document.getElementById('rb-badge').className = 'rb-badge loaded';
+    }, 300);
+  }
+  if (s.phase === 'read' || s.phase === 'done') {
+    const tRow = scn.targetRow;
+    for (let c = 0; c < COLS; c++) {
+      document.getElementById(`cell-${tRow}-${c}`).className = 'cell open';
+      document.getElementById(`rb-${c}`).className = 'rb-cell loaded';
+      document.getElementById(`rb-${c}`).textContent = data[tRow][c];
+    }
+    document.getElementById(`rlabel-${tRow}`).className = 'row-label active';
+    document.getElementById('rb-badge').textContent = `row ${tRow} loaded`;
+    document.getElementById('rb-badge').className = 'rb-badge loaded';
+    const tc = scn.targetCol;
+    document.getElementById(`cell-${tRow}-${tc}`).className = 'cell reading';
+    document.getElementById(`rb-${tc}`).className = 'rb-cell accessed';
+  }
+  const latTrack = document.getElementById('lat-track');
+  const latPill = document.getElementById('lat-pill');
+  const latExplain = document.getElementById('lat-explain');
+  if (s.phase === 'done') {
+    latTrack.style.display = 'flex';
+    if (current === 'hit') { latPill.className = 'lat-pill lat-fast'; latPill.textContent = 'row hit'; latExplain.textContent = '~14 ns — fastest DRAM access'; }
+    else if (current === 'miss') { latPill.className = 'lat-pill lat-medium'; latPill.textContent = 'row miss'; latExplain.textContent = '~28 ns — typical first access'; }
+    else { latPill.className = 'lat-pill lat-slow'; latPill.textContent = 'row switch'; latExplain.textContent = '~42 ns — worst case, 3× slower than hit'; }
+  } else { latTrack.style.display = 'none'; }
+  document.getElementById('phase-title').textContent = s.title;
+  document.getElementById('phase-desc').innerHTML = s.desc;
+  document.getElementById('cost-label').textContent = s.costLabel;
+  document.getElementById('cost-ns').textContent = s.costNs;
+  document.getElementById('cost-bar').style.width = s.cost + '%';
+  document.getElementById('cost-bar').style.background = s.costColor;
+  buildDots();
+}
+
+function nextStep() {
+  if (animating) return;
+  const scn = scenarios[current];
+  if (step >= scn.steps.length - 1) {
+    resetAnim(); return;
+  }
+  step++;
+  animating = true;
+  applyPhase(scn.steps[step]);
+  setTimeout(() => { animating = false; }, 400);
+  document.getElementById('btn-next').textContent = step >= scn.steps.length - 1 ? '↺ Restart' : '▶ Step forward';
+}
+
+function resetAnim() {
+  step = 0;
+  clearAll();
+  const scn = scenarios[current];
+  document.getElementById('phase-title').textContent = scn.steps[0].title;
+  document.getElementById('phase-desc').innerHTML = scn.steps[0].desc;
+  document.getElementById('cost-label').textContent = scn.steps[0].costLabel;
+  document.getElementById('cost-ns').textContent = scn.steps[0].costNs;
+  document.getElementById('cost-bar').style.width = '0%';
+  document.getElementById('cost-bar').style.background = 'var(--amber)';
+  if (scn.preOpenRow !== undefined && (current === 'hit')) {
+    for (let c = 0; c < COLS; c++) {
+      document.getElementById(`cell-${scn.preOpenRow}-${c}`).className = 'cell open';
+      document.getElementById(`rb-${c}`).className = 'rb-cell loaded';
+      document.getElementById(`rb-${c}`).textContent = data[scn.preOpenRow][c];
+    }
+    document.getElementById(`rlabel-${scn.preOpenRow}`).className = 'row-label active';
+    document.getElementById('rb-badge').textContent = `row ${scn.preOpenRow} loaded`;
+    document.getElementById('rb-badge').className = 'rb-badge loaded';
+  }
+  if (current === 'close') {
+    const pr = scn.preOpenRow;
+    for (let c = 0; c < COLS; c++) {
+      document.getElementById(`cell-${pr}-${c}`).className = 'cell open';
+      document.getElementById(`rb-${c}`).className = 'rb-cell loaded';
+      document.getElementById(`rb-${c}`).textContent = data[pr][c];
+    }
+    document.getElementById(`rlabel-${pr}`).className = 'row-label active';
+    document.getElementById('rb-badge').textContent = `row ${pr} loaded`;
+    document.getElementById('rb-badge').className = 'rb-badge loaded';
+  }
+  document.getElementById('lat-track').style.display = 'none';
+  buildDots();
+  document.getElementById('btn-next').textContent = '▶ Step forward';
+}
+
+function setScenario(name) {
+  current = name;
+  step = 0;
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`scn-${name}`).classList.add('active');
+  buildGrid();
+  resetAnim();
+}
+
+buildGrid();
+resetAnim();
+</script>
+
+<script>
+/* Mobile responsiveness: scale the widget down to fit narrow screens ONLY when
+   its content (the 12-column grid) is wider than the viewport. On wide screens
+   it fits, so the scale stays 1 and nothing changes. Purely additive. */
+(function () {
+  var card = document.querySelector(".wrap");
+  if (!card) return;
+  var wrap = document.createElement("div");
+  card.parentNode.insertBefore(wrap, card);
+  wrap.appendChild(card);
+  function fit() {
+    card.style.transform = "";
+    card.style.transformOrigin = "";
+    card.style.width = "";
+    wrap.style.height = "";
+    wrap.style.overflow = "";
+    var avail = document.documentElement.clientWidth;
+    var prevOX = card.style.overflowX;
+    card.style.overflowX = "hidden";
+    var natural = card.scrollWidth;
+    card.style.overflowX = prevOX;
+    if (natural > avail + 1) {
+      var sc = avail / natural;
+      card.style.width = natural + "px";
+      card.style.transformOrigin = "top left";
+      card.style.transform = "scale(" + sc + ")";
+      wrap.style.overflow = "hidden";
+      wrap.style.height = card.offsetHeight * sc + "px";
+    }
+  }
+  fit();
+  window.addEventListener("load", fit);
+  window.addEventListener("resize", fit);
+  setTimeout(fit, 250);
+  setTimeout(fit, 900);
+})();
+</script>
+
+<script>
+(function () {
+  function postH() {
+    var h = Math.ceil(document.body.getBoundingClientRect().height);
+    if (h > 0) parent.postMessage({ __memWidget: true, h: h }, "*");
+  }
+  window.addEventListener("load", postH);
+  window.addEventListener("resize", postH);
+  if (window.ResizeObserver) new ResizeObserver(postH).observe(document.body);
+  setTimeout(postH, 60);
+  setTimeout(postH, 350);
+})();
+</script>

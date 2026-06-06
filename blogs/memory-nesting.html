@@ -1,0 +1,106 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--border:#2e3350;
+  --text:#e2e4f0;--muted:#7c83a8;
+  --blue:#4a9eff;--green:#4ade80;--amber:#f5a623;
+}
+body{background:transparent}
+.wrap{
+  background:var(--bg);color:var(--text);
+  font-family:"Anthropic Sans",ui-monospace,monospace;
+  padding:28px 24px 24px;border-radius:12px;
+}
+.caption{
+  font-size:13px;color:var(--muted);
+  font-style:italic;margin-bottom:22px;
+  letter-spacing:.01em;
+}
+.chain{
+  display:flex;align-items:center;gap:0;
+  flex-wrap:nowrap;margin-bottom:28px;
+  overflow-x:auto;padding-bottom:4px;
+}
+.node{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;
+  border-radius:8px;border:1.5px solid;
+  padding:10px 14px;min-width:76px;
+  font-size:13px;font-weight:500;
+  line-height:1.3;cursor:default;
+  transition:filter .15s,transform .12s;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.node:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.node.blue{background:#0d1a2a;border-color:#185fa5;color:#4a9eff}
+.node.green{background:#0d1a10;border-color:#3b6d11;color:#4ade80}
+.node.amber{background:#1a1505;border-color:#854f0b;color:#f5a623}
+.arrow{
+  width:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:16px;
+}
+.annots{
+  display:flex;flex-direction:column;gap:14px;
+  border-top:1px solid var(--border);padding-top:16px;
+}
+.annot{display:flex;gap:10px;align-items:flex-start}
+.annot-tag{
+  font-size:11px;font-weight:500;letter-spacing:.07em;
+  padding:3px 8px;border-radius:4px;flex-shrink:0;
+  margin-top:1px;
+}
+.annot-tag.blue{background:#0d1a2a;color:#4a9eff;border:1px solid #185fa5}
+.annot-tag.green{background:#0d1a10;color:#4ade80;border:1px solid #3b6d11}
+.annot-tag.amber{background:#1a1505;color:#f5a623;border:1px solid #854f0b}
+.annot-text{font-size:12px;color:var(--muted);line-height:1.6}
+.annot-text em{color:var(--text);font-style:normal}
+</style>
+
+<div class="wrap">
+  <div class="caption">how a memory system nests, from the outside in</div>
+
+  <div class="chain">
+    <div class="node blue">Channel</div>
+    <div class="arrow">→</div>
+    <div class="node green">DIMM</div>
+    <div class="arrow">→</div>
+    <div class="node amber">Rank</div>
+    <div class="arrow">→</div>
+    <div class="node blue">Chip</div>
+    <div class="arrow">→</div>
+    <div class="node green">Bank</div>
+    <div class="arrow">→</div>
+    <div class="node amber">Row ×<br>Column</div>
+  </div>
+
+  <div class="annots">
+    <div class="annot">
+      <span class="annot-tag green">BANK</span>
+      <div class="annot-text">An independent grid with its own row buffer. DDR4 chips have <em>16 banks</em>, DDR5 has <em>32</em> so many rows can be open at once, in different banks, in parallel.</div>
+    </div>
+    <div class="annot">
+      <span class="annot-tag blue">CHANNEL</span>
+      <div class="annot-text">A whole separate pathway to the controller. <em>More channels = more lanes of traffic</em> each channel can transfer data completely independently.</div>
+    </div>
+    <div class="annot">
+      <span class="annot-tag amber">RANK</span>
+      <div class="annot-text">A group of chips that all respond together on the same channel. Ranks time-share the channel but they can <em>prepare in the background</em>.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function postH() {
+    var h = Math.ceil(document.body.getBoundingClientRect().height);
+    if (h > 0) parent.postMessage({ __memWidget: true, h: h }, "*");
+  }
+  window.addEventListener("load", postH);
+  window.addEventListener("resize", postH);
+  if (window.ResizeObserver) new ResizeObserver(postH).observe(document.body);
+  setTimeout(postH, 60);
+  setTimeout(postH, 350);
+})();
+</script>

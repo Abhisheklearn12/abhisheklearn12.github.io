@@ -1,0 +1,307 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--border:#2e3350;--text:#e2e4f0;--muted:#7c83a8;
+}
+.wrap{
+  background:var(--bg);color:var(--text);
+  font-family:"Anthropic Sans",ui-monospace,monospace;
+  padding:22px 24px 20px;border-radius:12px;
+}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.hdr-title{font-size:10px;font-weight:700;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.dots{display:flex;gap:5px;align-items:center}
+.dots i{width:7px;height:7px;border-radius:50%;background:#2e3350;transition:all .2s;display:block}
+.pp-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 14px;border-radius:7px;
+  border:1.5px solid #2e3350;background:#1a1d27;color:#7c83a8;
+  font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+  letter-spacing:0.03em;transition:all .15s;
+}
+.caption{font-size:13px;color:var(--muted);font-style:italic;margin-bottom:18px}
+.chart-area{position:relative;width:100%;height:320px}
+canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.label-speed{
+  position:absolute;left:2px;top:50%;
+  transform:rotate(-90deg) translateX(50%);
+  transform-origin:left center;
+  font-size:11px;color:var(--muted);white-space:nowrap;pointer-events:none;
+}
+.label-proc{
+  position:absolute;right:16px;
+  font-size:13px;font-weight:500;color:#4a9eff;
+  text-align:right;line-height:1.4;
+  opacity:0;transition:opacity .6s;pointer-events:none;
+}
+.label-mem{
+  position:absolute;right:16px;
+  font-size:13px;font-weight:500;color:#4ade80;
+  text-align:right;line-height:1.4;
+  opacity:0;transition:opacity .6s;pointer-events:none;
+}
+.annotation{
+  position:absolute;font-size:12px;font-style:italic;
+  color:#f5a623;line-height:1.45;
+  opacity:0;transition:opacity .6s;pointer-events:none;
+}
+.annot-dot{
+  position:absolute;width:7px;height:7px;border-radius:50%;
+  background:#f5a623;transform:translate(-50%,-50%);
+  opacity:0;transition:opacity .6s;pointer-events:none;
+}
+</style>
+
+<div class="wrap">
+  <div class="hdr">
+    <span class="hdr-title">The Memory Wall</span>
+    <div class="hdr-right">
+      <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+      <button class="pp-btn" id="ppbtn" onclick="toggleAnim()">&#9646;&#9646;&nbsp;Pause</button>
+    </div>
+  </div>
+  <div class="caption">speed over the decades</div>
+  <div class="chart-area">
+    <canvas id="c"></canvas>
+    <div class="label-speed">speed &#8594;</div>
+    <div class="label-proc" id="lp">PROCESSOR<br><span style="font-weight:400;font-size:11px;color:var(--muted)">sprints ahead</span></div>
+    <div class="label-mem" id="lm">MEMORY<br><span style="font-weight:400;font-size:11px;color:var(--muted)">crawls</span></div>
+    <div class="annotation" id="ann">the growing gap =<br>"the memory wall"</div>
+    <div class="annot-dot" id="adot"></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const wrap = canvas.parentElement;
+let W, H, ctx, PAD_L, PAD_R, PAD_T, PAD_B, CW, CH;
+let procPts, memPts, maxVal;
+const years = [1975,1978,1981,1984,1987,1990,1993,1996,1999,2002,2005,2008,2011,2014,2017,2020,2024];
+
+function setup(){
+  W = wrap.clientWidth;
+  H = 320;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width = W+'px';
+  canvas.style.height = H+'px';
+  ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  PAD_L=52; PAD_R=110; PAD_T=20; PAD_B=44;
+  CW = W-PAD_L-PAD_R;
+  CH = H-PAD_T-PAD_B;
+
+  const procRaw = years.map(y=>{ const t=(y-1975)/(2024-1975); return Math.pow(t+0.04,2.5)*220+1; });
+  const memRaw  = years.map(y=>{ const t=(y-1975)/(2024-1975); return Math.pow(t+0.04,0.72)*18+1; });
+  maxVal = Math.max(...procRaw)*1.08;
+  procPts = years.map((y,i)=>[xOf(y), yOf(procRaw[i])]);
+  memPts  = years.map((y,i)=>[xOf(y), yOf(memRaw[i])]);
+}
+
+function xOf(year){ return PAD_L+(year-1975)/(2024-1975)*CW; }
+function yOf(val){ return PAD_T+CH-(val/maxVal)*CH; }
+
+function drawAxes(){
+  ctx.strokeStyle='rgba(126,133,168,0.25)';
+  ctx.lineWidth=0.5;
+  ctx.beginPath();
+  ctx.moveTo(PAD_L,PAD_T);
+  ctx.lineTo(PAD_L,PAD_T+CH);
+  ctx.lineTo(PAD_L+CW,PAD_T+CH);
+  ctx.stroke();
+  ctx.fillStyle='rgba(126,133,168,0.5)';
+  ctx.font=`11px "Anthropic Sans",ui-monospace,monospace`;
+  ctx.textAlign='center';
+  [1980,1990,2000,2010].forEach(y=>{
+    const x=xOf(y);
+    ctx.fillText(String(y),x,PAD_T+CH+18);
+    ctx.strokeStyle='rgba(126,133,168,0.10)';
+    ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(x,PAD_T); ctx.lineTo(x,PAD_T+CH); ctx.stroke();
+  });
+  ctx.fillText('today',xOf(2022),PAD_T+CH+18);
+}
+
+function getCurvePoint(pts, t){
+  const total = pts.length-1;
+  const seg = Math.min(Math.floor(t*total), total-1);
+  const lt = t*total - seg;
+  const [x1,y1]=pts[seg], [x2,y2]=pts[seg+1];
+  const cx=(x1+x2)/2;
+  const bx = (1-lt)*(1-lt)*x1 + 2*(1-lt)*lt*cx + lt*lt*x2;
+  const by = (1-lt)*(1-lt)*y1 + 2*(1-lt)*lt*((y1+y2)/2) + lt*lt*y2;
+  return [bx,by];
+}
+
+function drawCurveUpTo(pts, t, color, lineW){
+  if(t<=0) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  const steps = Math.ceil(t*(pts.length-1)*12);
+  for(let i=1;i<=steps;i++){
+    const frac = i/steps;
+    const [x,y]=getCurvePoint(pts, Math.min(frac,1)*t);
+    ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle=color;
+  ctx.lineWidth=lineW;
+  ctx.stroke();
+}
+
+function drawGap(gapT){
+  if(gapT<=0) return;
+  const n=40;
+  ctx.beginPath();
+  for(let i=0;i<=n;i++){
+    const frac=i/n*gapT;
+    const [x,y]=getCurvePoint(procPts,frac);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  for(let i=n;i>=0;i--){
+    const frac=i/n*gapT;
+    const [x,y]=getCurvePoint(memPts,frac);
+    ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fillStyle='rgba(245,166,35,0.10)';
+  ctx.fill();
+}
+
+/* ---- animation control: autoplay + continuous loop + play/pause ---- */
+const PHASE_PROC=1800, PHASE_MEM=1200, PHASE_GAP=800, PHASE_LABELS=400;
+const DELAY_MEM=600, DELAY_GAP=DELAY_MEM+PHASE_MEM+200, DELAY_LABELS=DELAY_GAP+PHASE_GAP+300;
+const TOTAL=DELAY_LABELS+PHASE_LABELS+400;
+const HOLD=1600, FADE=450, LOOP_TOTAL=TOTAL+HOLD;
+
+let animId=null, elapsed=0, lastTs=null, playing=false;
+
+function ease(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+
+function setDot(i,state){
+  const d=document.getElementById('dots').children[i];
+  if(state==='on'){ d.style.background='#f5a623'; d.style.boxShadow='0 0 6px #f5a623bb'; }
+  else if(state==='done'){ d.style.background='#4ade80'; d.style.boxShadow='none'; }
+  else { d.style.background='#2e3350'; d.style.boxShadow='none'; }
+}
+function updateDots(e){
+  const stages=[
+    [0, PHASE_PROC],
+    [DELAY_MEM, DELAY_MEM+PHASE_MEM],
+    [DELAY_GAP, DELAY_GAP+PHASE_GAP],
+    [DELAY_LABELS, DELAY_LABELS+PHASE_LABELS]
+  ];
+  for(let i=0;i<4;i++){
+    const s=stages[i][0], en=stages[i][1];
+    if(e>=en) setDot(i,'done'); else if(e>=s) setDot(i,'on'); else setDot(i,'off');
+  }
+}
+
+function render(e, fade){
+  canvas.style.opacity = fade;
+  ctx.clearRect(0,0,W,H);
+  drawAxes();
+
+  const procT = ease(Math.min(e/PHASE_PROC,1));
+  drawCurveUpTo(procPts, procT, '#4a9eff', 2.5);
+
+  const memProgress = Math.max(0,e-DELAY_MEM);
+  const memT = ease(Math.min(memProgress/PHASE_MEM,1));
+  drawCurveUpTo(memPts, memT, '#4ade80', 2.5);
+
+  const gapProgress = Math.max(0,e-DELAY_GAP);
+  const gapT = ease(Math.min(gapProgress/PHASE_GAP,1));
+  drawGap(gapT);
+
+  const labelProgress = Math.max(0,e-DELAY_LABELS);
+  const labelO = Math.min(labelProgress/PHASE_LABELS,1)*fade;
+  document.getElementById('lp').style.opacity=labelO;
+  document.getElementById('lm').style.opacity=labelO;
+  document.getElementById('ann').style.opacity=labelO;
+  document.getElementById('adot').style.opacity=labelO;
+
+  updateDots(e);
+}
+
+function frame(ts){
+  if(!playing) return;
+  if(lastTs==null) lastTs=ts;
+  elapsed += ts-lastTs;
+  lastTs=ts;
+
+  if(elapsed>=LOOP_TOTAL){ elapsed=0; }
+
+  let fade=1;
+  if(elapsed > LOOP_TOTAL-FADE){ fade = Math.max(0,(LOOP_TOTAL-elapsed)/FADE); }
+
+  render(elapsed, fade);
+  animId=requestAnimationFrame(frame);
+}
+
+function play(){
+  if(playing) return;
+  playing=true; lastTs=null;
+  const b=document.getElementById('ppbtn');
+  b.innerHTML='&#9646;&#9646;&nbsp;Pause';
+  b.style.borderColor='#2e3350'; b.style.background='#1a1d27'; b.style.color='#7c83a8';
+  animId=requestAnimationFrame(frame);
+}
+function pause(){
+  if(!playing) return;
+  playing=false;
+  if(animId) cancelAnimationFrame(animId);
+  animId=null;
+  const b=document.getElementById('ppbtn');
+  b.innerHTML='&#9654;&nbsp;Play';
+  b.style.borderColor='#f5a623'; b.style.background='#2a2010'; b.style.color='#f5a623';
+}
+function toggleAnim(){ playing ? pause() : play(); }
+
+function positionLabels(){
+  const lp=document.getElementById('lp');
+  lp.style.top=Math.max(PAD_T, procPts[procPts.length-1][1]-10)+'px';
+
+  const lm=document.getElementById('lm');
+  lm.style.bottom=(H-memPts[memPts.length-1][1]-10)+'px';
+
+  const annX=xOf(2001);
+  const midY=(getCurvePoint(procPts,0.52)[1]+getCurvePoint(memPts,0.52)[1])/2;
+
+  const ann=document.getElementById('ann');
+  ann.style.left=(annX-148)+'px';
+  ann.style.top=(midY-42)+'px';
+
+  const dot=document.getElementById('adot');
+  dot.style.left=annX+'px';
+  dot.style.top=midY+'px';
+}
+
+setup();
+positionLabels();
+/* autoplay on load, loop forever (until paused) */
+playing=true; lastTs=null; elapsed=0;
+animId=requestAnimationFrame(frame);
+
+window.addEventListener('resize',()=>{
+  setup();
+  positionLabels();
+  let fade=1;
+  if(elapsed > LOOP_TOTAL-FADE){ fade = Math.max(0,(LOOP_TOTAL-elapsed)/FADE); }
+  render(elapsed, fade);
+});
+</script>
+
+<script>
+(function () {
+  function postH() {
+    var h = Math.ceil(document.body.getBoundingClientRect().height);
+    if (h > 0) parent.postMessage({ __memWidget: true, h: h }, "*");
+  }
+  window.addEventListener("load", postH);
+  window.addEventListener("resize", postH);
+  if (window.ResizeObserver) new ResizeObserver(postH).observe(document.body);
+  setTimeout(postH, 60);
+  setTimeout(postH, 350);
+})();
+</script>
