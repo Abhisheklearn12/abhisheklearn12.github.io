@@ -75,6 +75,9 @@
       .project-card:nth-child(2) {
         animation-delay: 0.25s;
       }
+      .project-card:nth-child(3) {
+        animation-delay: 0.4s;
+      }
       .project-card:hover {
         transform: translateY(-4px);
       }
@@ -203,7 +206,7 @@
         </li>
 
         <!-- Chess Engine -->
-        <li class="project-card pb-2">
+        <li class="project-card border-b border-gray-200 pb-8">
           <div class="flex items-start justify-between gap-4">
             <h3 class="text-lg font-semibold">
               <a
@@ -240,6 +243,53 @@
           </div>
           <a
             href="https://github.com/Abhisheklearn12/chess-engine"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="repo-link mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600"
+          >
+            View on GitHub
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </a>
+        </li>
+
+        <!-- Inference CUDA Kernels -->
+        <li class="project-card pb-2">
+          <div class="flex items-start justify-between gap-4">
+            <h3 class="text-lg font-semibold">
+              <a
+                href="https://github.com/Abhisheklearn12/inference-cuda-kernels"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hover:text-orange-600 transition"
+                >High Perf. Inference CUDA Kernels</a
+              >
+            </h3>
+            <a
+              href="https://github.com/Abhisheklearn12/inference-cuda-kernels"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Inference CUDA Kernels on GitHub"
+              class="shrink-0 text-gray-500 hover:text-orange-600 transition"
+              ><i data-lucide="github" class="w-5 h-5"></i
+            ></a>
+          </div>
+          <ul
+            class="mt-2 space-y-1.5 text-gray-700 leading-relaxed list-disc list-outside pl-5 marker:text-orange-600"
+          >
+            <li>Step-by-step optimized CUDA kernels for the core operations of LLM inference.</li>
+            <li>Five ops (GEMV, Softmax, RMSNorm, SiLU, attention decode), each a progression from a naive kernel to an optimized one.</li>
+            <li>Memory-bandwidth bound: every optimization chases the 360 GB/s DRAM bandwidth, not FLOPS.</li>
+            <li>Verified against a double-precision CPU reference across many shapes and edge cases; all 161 checks pass.</li>
+            <li>Written for and measured on an NVIDIA RTX 3060 12GB (Ampere GA106, sm_86).</li>
+          </ul>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+            <span class="px-2 py-0.5 rounded-full border border-gray-300">CUDA</span>
+            <span class="px-2 py-0.5 rounded-full border border-gray-300">LLM inference</span>
+            <span class="px-2 py-0.5 rounded-full border border-gray-300">GPU kernels</span>
+            <span class="px-2 py-0.5 rounded-full border border-gray-300">Performance</span>
+          </div>
+          <a
+            href="https://github.com/Abhisheklearn12/inference-cuda-kernels"
             target="_blank"
             rel="noopener noreferrer"
             class="repo-link mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600"
